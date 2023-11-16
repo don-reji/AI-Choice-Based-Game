@@ -30,18 +30,20 @@ auth_provider = PlainTextAuthProvider(CLIENT_ID, CLIENT_SECRET)
 cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
 session = cluster.connect()
 
+# Initialize a place in the vector DB to store log of chat history for this app  
 message_history=CassandraChatMessageHistory(
-    session_id="anything",
+    session_id="anything",#anything
     session=session,
     keyspace=ASTRA_DB_KEYSPACE,
-    ttl_seconds=3600
+    ttl_seconds=3600 # time to live seconds, amount of time this is stored
 )
 
-message_history.clear()
+message_history.clear() # clear memory, every time we run this app we get new set of memory for that instance of the game
 
+#wrapper around to add to the message_history
 cass_buff_memory=ConversationBufferMemory(
-    memory_key="chat_history",
-    chat_memory=message_history
+    memory_key="chat_history", #anything
+    chat_memory=message_history # easier to laod this into openai prompt
 )
 
 template = """
@@ -62,16 +64,21 @@ Human: {human_input}
 AI:"""
 
 prompt=PromptTemplate(
-    input_variables=['chat_history','human_input'],
+    input_variables=['chat_history','human_input'], # adding these variables into template
     template=template
 )
 
+#initializing connection with openai
 llm=OpenAI(openai_api_key=OPENAI_API_KEY)
+
+
 llm_chain=LLMChain(
     llm=llm,
     prompt=prompt,
     memory=cass_buff_memory
 )
+
+#to start the prompt with initail message
 choice='start'
 while True:
 
